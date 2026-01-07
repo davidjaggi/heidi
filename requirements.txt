@@ -1,0 +1,11 @@
+yfinance
+pydantic
+langgraph
+langchain
+langchain-google-genai
+langchain-anthropic
+python-dotenv
+pandas
+typer
+rich
+duckduckgo-search
