@@ -1,4 +1,4 @@
-# Swiss AI Trader
+# Heidi
 
 A multi-agent system powered by LLMs (Gemini or Claude) to analyze the Swiss Market Index (SMI) on a weekly basis. The system deploys autonomous analyst agents for each constituent stock and a portfolio manager agent to recommend an optimal portfolio allocation.
 
