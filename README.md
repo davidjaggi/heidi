@@ -17,8 +17,8 @@ A multi-agent system powered by LLMs (Gemini or Claude) to analyze the Swiss Mar
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/SwissTradingAgent.git
-   cd SwissTradingAgent
+   git clone https://github.com/davidjaggi/heidi.git
+   cd heidi
    ```
 
 2. **Install dependencies**:
