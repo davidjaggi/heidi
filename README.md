@@ -40,7 +40,7 @@ The application is run as a python module.
 ### Basic Run
 Run the full analysis on all SMI stocks (defined in `data/tickers.txt`):
 ```bash
-python -m cli.main run
+python -m cli.main
 ```
 
 ### Options
@@ -52,7 +52,7 @@ python -m cli.main run
 **Example**:
 ```bash
 # Run a quick test with a subset of tickers
-python -m cli.main run --tickers data/test_tickers.txt --model gemini
+python -m cli.main --tickers data/test_tickers.txt --model gemini
 ```
 
 ## Output
