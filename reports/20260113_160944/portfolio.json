@@ -1,0 +1,15 @@
+{
+  "allocations": [
+    {
+      "ticker": "ROG.SW",
+      "weight": 0.6,
+      "reasoning": "Healthcare sector showing strong momentum with BUY recommendation (Score: 0.72). ROG demonstrates uptrend from November 2025 onwards with attractive 2.83% dividend yield. Despite elevated PE ratio of 28.85, the positive momentum and sector tailwinds justify a significant overweight position. Healthcare is a defensive growth sector with strong long-term fundamentals."
+    },
+    {
+      "ticker": "NESN.SW",
+      "weight": 0.4,
+      "reasoning": "Consumer Defensive sector provides portfolio stability with NEUTRAL recommendation (Score: 0.72). NESN offers strong 4.07% dividend yield for steady income generation. While trading 18.2% below 52-week high suggests near-term weakness, the defensive positioning and high dividend yield provide valuable portfolio ballast. The elevated PE ratio limits upside but supports income strategy. This allocation balances growth exposure with defensive income."
+    }
+  ],
+  "timestamp": "2026-01-13T16:09:44.374190"
+}

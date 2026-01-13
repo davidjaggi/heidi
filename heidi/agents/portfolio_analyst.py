@@ -1,19 +1,18 @@
 import logging
-from src.models.state import AgentState
+from heidi.models.state import AgentState
 from cli.utils.llm import get_llm
-from src.models.schemas import Portfolio
+from heidi.models.schemas import Portfolio
+from heidi.default_config import DEFAULT_CONFIG
 from langchain_core.prompts import ChatPromptTemplate
 from datetime import datetime
+from cli.utils.callbacks import HeidiCallbackHandler
 
 logger = logging.getLogger(__name__)
 
-def portfolio_node(state: AgentState):
+def portfolio_analyst_node(state: AgentState):
     reports = state["reports"]
-    # We might need to pass model config in state or use defaults/globals.
-    # For now assuming defaults or we could add config to state.
-    # Let's assume we can pass config via RunnableConfig if needed, but for simplicity:
-    model_provider = "gemini" 
-    
+    model_provider = state.get("model_provider") or DEFAULT_CONFIG["llm_provider"]
+    model_name = state.get("model_name") or DEFAULT_CONFIG["deep_think_llm"]
     # 1. Summarize Reports
     summaries = []
     for r in reports:
@@ -37,11 +36,11 @@ Provide reasoning for each allocation.
     ])
     
     # 3. Call LLM
-    llm = get_llm(model_provider)
+    llm = get_llm(model_provider, model_name)
     structured_llm = llm.with_structured_output(Portfolio)
     
     chain = prompt | structured_llm
-    portfolio = chain.invoke({})
+    portfolio = chain.invoke({}, config={"callbacks": [HeidiCallbackHandler()], "metadata": {"agent_name": "PortfolioManager"}})
     
     # Timestamp
     portfolio.timestamp = datetime.now().isoformat()

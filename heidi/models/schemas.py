@@ -24,6 +24,7 @@ class Metrics(BaseModel):
 class AnalystReport(BaseModel):
     ticker: str
     company: str
+    sector: str
     recommendation: Recommendation
     confidence_score: float = Field(..., ge=0, le=1)
     key_drivers: List[str]

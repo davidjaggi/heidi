@@ -1,6 +1,6 @@
 import operator
 from typing import List, Annotated, TypedDict, Optional
-from src.models.schemas import AnalystReport, Portfolio
+from heidi.models.schemas import AnalystReport, Portfolio
 
 class AgentState(TypedDict):
     tickers: List[str]

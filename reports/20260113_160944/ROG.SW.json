@@ -1,0 +1,34 @@
+{
+  "ticker": "ROG.SW",
+  "company": "Roche Holding AG",
+  "sector": "Healthcare",
+  "recommendation": "BUY",
+  "confidence_score": 0.72,
+  "key_drivers": [
+    "Strong uptrend momentum from November 2025 onwards",
+    "Attractive dividend yield of 2.83%",
+    "Solid market position in pharmaceutical sector",
+    "Recent price recovery near 52-week highs",
+    "Large-cap stability with CHF 272B market cap"
+  ],
+  "risks": [
+    "Elevated PE ratio of 28.85 suggests premium valuation",
+    "Significant volatility observed in mid-2025 (April-August weakness)",
+    "Pharmaceutical sector regulatory and patent cliff risks",
+    "Macro headwinds and interest rate sensitivity",
+    "Concentration risk in healthcare sector"
+  ],
+  "technical_view": "Strong bullish momentum with price appreciating 46% from August 2025 lows (246.40 CHF) to current levels (339.00 CHF). The stock has broken above key resistance levels and is trading near 52-week highs (342.90 CHF). Weekly chart shows consistent higher lows and higher highs since November 2025, indicating a healthy uptrend. Current price is 99% of 52-week high, suggesting strong technical strength. However, the sharp rally warrants caution regarding potential pullback or consolidation.",
+  "metrics": {
+    "market_cap": 271964323840.0,
+    "pe_ratio": 28.851065,
+    "peg_ratio": null,
+    "dividend_yield": 2.83,
+    "eps": null,
+    "profit_margin": null,
+    "high_52_week": 342.9,
+    "low_52_week": 231.9,
+    "analyst_target_price": null,
+    "currency": "CHF"
+  }
+}

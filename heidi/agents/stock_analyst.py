@@ -2,16 +2,18 @@ import logging
 from typing import Dict, Any
 
 from langchain_core.prompts import ChatPromptTemplate
-from src.data.market_data import get_full_analysis_data
+from heidi.tools.market_data import get_full_analysis_data
 from cli.utils.llm import get_llm
-from src.models.schemas import AnalystReport
+from heidi.default_config import DEFAULT_CONFIG
+from heidi.models.schemas import AnalystReport
+from cli.utils.callbacks import HeidiCallbackHandler
 
 logger = logging.getLogger(__name__)
 
-def analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
+def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     ticker = inputs["ticker"]
     model_provider = inputs.get("model_provider", "gemini")
-    model_name = inputs.get("model_name")
+    model_name = inputs.get("model_name") or DEFAULT_CONFIG["fast_think_llm"]
     
     logger.info(f"Analyst Node running for {ticker}...")
     
@@ -30,7 +32,11 @@ def analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     structured_llm = llm.with_structured_output(AnalystReport)
     
     chain = prompt | structured_llm
-    report = chain.invoke({})
+    report = chain.invoke({}, config={"callbacks": [HeidiCallbackHandler()], "metadata": {"agent_name": f"Analyst:{ticker}"}})
+    
+    # Ensure sector is populated (fallback if LLM misses it, though structured output should handle it)
+    if not report.sector and "info" in data:
+        report.sector = data["info"].get("sector", "Unknown Sector")
     
     # Return as list to match 'reports' state annotation (operator.add)
     return {"reports": [report]}
