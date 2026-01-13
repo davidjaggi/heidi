@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     ticker = inputs["ticker"]
     model_provider = inputs.get("model_provider", "gemini")
-    model_name = inputs.get("model_name") or DEFAULT_CONFIG["fast_think_llm"]
+    model_name = inputs.get("model_name") or DEFAULT_CONFIG["shallow_think_llm"]
     
     logger.info(f"Analyst Node running for {ticker}...")
     
