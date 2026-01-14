@@ -1,3 +1,5 @@
+![Cow Banner](assets/cow.jpg)
+
 # Heidi
 
 A multi-agent system powered by LLMs (Gemini, Claude, or OpenAI) to analyze the Swiss market. The system deploys autonomous analyst agents for each constituent stock and a lead portfolio manager agent to recommend an optimal portfolio allocation.
