@@ -15,9 +15,14 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     model_provider = inputs.get("model_provider", "gemini")
     model_name_shallow = inputs.get("model_name_shallow") or inputs.get("model_name") or DEFAULT_CONFIG["shallow_think_llm"]
     model_name_deep = inputs.get("model_name_deep") or inputs.get("model_name") or DEFAULT_CONFIG["deep_think_llm"]
-    
-    logger.info(f"Analyst Node running for {ticker}...")
-    
+    review_feedback = inputs.get("review_feedback", [])
+
+    # Check if this is a revision (feedback exists for this ticker)
+    ticker_feedback = [f for f in review_feedback if f"[{ticker}]" in f and "NEEDS REVISION" in f]
+    is_revision = len(ticker_feedback) > 0
+
+    logger.info(f"Analyst Node running for {ticker}{'(REVISION)' if is_revision else ''}...")
+
     # 1. Fetch Data
     try:
         data = get_full_analysis_data(ticker)
@@ -25,8 +30,8 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Failed to fetch data for {ticker}: {e}")
         raise
 
-    # 2. Build Prompt
-    prompt = _build_prompt(ticker, data)
+    # 2. Build Prompt (include feedback if revision)
+    prompt = _build_prompt(ticker, data, ticker_feedback if is_revision else None)
     
     # 3. Call LLM
     llm = get_llm(model_provider, model_name_shallow)
@@ -52,7 +57,7 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
         "prompts": [{"agent": f"Analyst:{ticker}", "prompt": prompt_text}]
     }
 
-def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
+def _build_prompt(ticker: str, data: Dict[str, Any], revision_feedback: list = None) -> ChatPromptTemplate:
     info = data.get("info", {})
     history = data.get("history", "")
     news = data.get("news", [])
@@ -123,7 +128,20 @@ Current Price: {info.get('current_price')} {info.get('currency')}
 5. Provide a technical view.
 6. Provide an ESG assessment summarizing governance quality.
 """
+
+    # Add revision feedback if this is a revision request
+    if revision_feedback:
+        feedback_text = "\n".join(revision_feedback)
+        system_msg += f"""
+
+### REVISION REQUEST
+Your previous report was reviewed and needs improvement. Address the following feedback:
+{feedback_text}
+
+Please carefully address all issues raised by the reviewer in your revised report.
+"""
+
     return ChatPromptTemplate.from_messages([
         ("system", system_msg),
-        ("user", "Generate the analyst report.")
+        ("user", "Generate the analyst report." if not revision_feedback else "Generate a REVISED analyst report addressing all reviewer feedback.")
     ])

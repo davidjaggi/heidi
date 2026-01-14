@@ -150,7 +150,9 @@ def run(
             "prompts": [],
             "model_provider": model,
             "model_name_shallow": shallow_model,
-            "model_name_deep": deep_model
+            "model_name_deep": deep_model,
+            "revision_count": 0,
+            "review_feedback": []
         }
         
         start_time = time.time()
