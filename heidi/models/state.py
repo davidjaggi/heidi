@@ -7,4 +7,5 @@ class AgentState(TypedDict):
     reports: Annotated[List[AnalystReport], operator.add]
     portfolio: Portfolio
     model_provider: Optional[str]
-    model_name: Optional[str]
+    model_name_shallow: Optional[str]
+    model_name_deep: Optional[str]

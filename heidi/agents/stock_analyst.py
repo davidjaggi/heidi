@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     ticker = inputs["ticker"]
     model_provider = inputs.get("model_provider", "gemini")
-    model_name = inputs.get("model_name") or DEFAULT_CONFIG["shallow_think_llm"]
+    model_name_shallow = inputs.get("model_name_shallow") or inputs.get("model_name") or DEFAULT_CONFIG["shallow_think_llm"]
+    model_name_deep = inputs.get("model_name_deep") or inputs.get("model_name") or DEFAULT_CONFIG["deep_think_llm"]
     
     logger.info(f"Analyst Node running for {ticker}...")
     
@@ -28,15 +29,18 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     prompt = _build_prompt(ticker, data)
     
     # 3. Call LLM
-    llm = get_llm(model_provider, model_name)
+    llm = get_llm(model_provider, model_name_shallow)
     structured_llm = llm.with_structured_output(AnalystReport)
     
     chain = prompt | structured_llm
     report = chain.invoke({}, config={"callbacks": [HeidiCallbackHandler()], "metadata": {"agent_name": f"Analyst:{ticker}"}})
     
-    # Ensure sector is populated (fallback if LLM misses it, though structured output should handle it)
-    if not report.sector and "info" in data:
-        report.sector = data["info"].get("sector", "Unknown Sector")
+    # Ensure sector and industry are populated (fallback if LLM misses it)
+    if "info" in data:
+        if not report.sector:
+            report.sector = data["info"].get("sector", "Unknown Sector")
+        if not report.industry:
+            report.industry = data["info"].get("industry", "Unknown Industry")
     
     # Return as list to match 'reports' state annotation (operator.add)
     return {"reports": [report]}
@@ -45,9 +49,19 @@ def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
     info = data.get("info", {})
     history = data.get("history", "")
     news = data.get("news", [])
+    tech = data.get("technical_indicators", {})
     
     news_str = "\n".join([f"- {n['title']} ({n['publisher']}, {n['publish_time']})" for n in news])
     
+    tech_str = f"""
+- RSI (14): {tech.get('rsi_14', 'N/A')}
+- MACD: {tech.get('macd', 'N/A')} (Signal: {tech.get('macd_signal', 'N/A')})
+- SMA 50: {tech.get('sma_50', 'N/A')}
+- SMA 200: {tech.get('sma_200', 'N/A')}
+- Bollinger Bands: Upper {tech.get('bb_upper', 'N/A')}, Middle {tech.get('bb_middle', 'N/A')}, Lower {tech.get('bb_lower', 'N/A')}
+- ATR (14): {tech.get('atr_14', 'N/A')}
+    """.strip()
+
     system_msg = f"""
 You are a senior financial analyst specializing in the Swiss Market. 
 Analyze the following data for {ticker} and produce a structured investment report.
@@ -60,10 +74,20 @@ Market Cap: {info.get("market_cap")}
 PE Ratio: {info.get("pe_ratio")}
 Dividend Yield: {info.get("dividend_yield")}
 
+### Analyst Price Targets
+- Target Low: {info.get("target_low", "N/A")}
+- Target Mean: {info.get("target_mean", "N/A")}
+- Target High: {info.get("target_high", "N/A")}
+- Rating: {info.get("recommendation_key", "N/A")} (Mean Score: {info.get("recommendation_mean", "N/A")})
+- Coverage: Based on {info.get("number_of_analysts", "N/A")} analysts
+
 ### Market Data
 Current Price: {info.get('current_price')} {info.get('currency')}
 52 Week High: {info.get('52_week_high')}
 52 Week Low: {info.get('52_week_low')}
+
+### Technical Indicators
+{tech_str}
 
 ### Price History (Weekly Close, Last 1 Year)
 {history}

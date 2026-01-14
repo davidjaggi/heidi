@@ -37,9 +37,9 @@ def save_output(output_dir: Path, data: dict, filename: str):
 
 def generate_markdown_summary(output_dir: Path, reports: list, portfolio, timestamp: str, model_info: str):
     """
-    Generates a README.md summary for the run.
+    Generates a summary.md for the run.
     """
-    summary_path = output_dir / "README.md"
+    summary_path = output_dir / "summary.md"
     
     content = f"# Heidi Investment Run Summary - {timestamp}\n\n"
     content += f"**Model Configuration:** {model_info}\n\n"

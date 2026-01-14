@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 def portfolio_analyst_node(state: AgentState):
     reports = state["reports"]
     model_provider = state.get("model_provider") or DEFAULT_CONFIG["llm_provider"]
-    model_name = state.get("model_name") or DEFAULT_CONFIG["deep_think_llm"]
+    model_name_shallow = state.get("model_name_shallow") or state.get("model_name") or DEFAULT_CONFIG["shallow_think_llm"]
+    model_name_deep = state.get("model_name_deep") or state.get("model_name") or DEFAULT_CONFIG["deep_think_llm"]
     # 1. Summarize Reports
     summaries = []
     for r in reports:
@@ -36,7 +37,7 @@ Provide reasoning for each allocation.
     ])
     
     # 3. Call LLM
-    llm = get_llm(model_provider, model_name)
+    llm = get_llm(model_provider, model_name_deep)
     structured_llm = llm.with_structured_output(Portfolio)
     
     chain = prompt | structured_llm
