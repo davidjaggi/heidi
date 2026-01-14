@@ -9,15 +9,24 @@ A multi-agent system powered by LLMs (Gemini, Claude, or OpenAI) to analyze the 
 
 ## Features
 
-- **Multi-Agent Architecture (LangGraph)**: 
+- **Multi-Agent Architecture (LangGraph)**:
   - **Stock Analyst Agents**: Parallel execution of agents for each stock ticker.
-  - **Portfolio Manager**: Aggregates analyst reports and optimizes allocation.
+  - **Report Reviewer**: Reviews analyst reports for quality, requesting revisions if needed (up to 2 revision cycles).
+  - **Portfolio Manager**: Aggregates analyst reports and optimizes allocation (fully invested, no cash position).
   - **State Management**: Orchestrated via `LangGraph` for robust concurrent execution.
 - **Enhanced Observability**:
   - **Nuanced Logging**: Custom `HeidiCallbackHandler` for detailed step-by-step terminal output.
-- **Data Sources**: 
+- **Data Sources**:
   - Market data, price history, and news headlines via `yfinance`.
 - **Beautiful CLI**: Built with `Typer` and `Rich` for a premium terminal experience.
+
+## Architecture
+
+```
+START → Stock Analysts (parallel) → Report Reviewer → Portfolio Manager → END
+                    ↑                      |
+                    └──────────────────────┘ (revision loop if needed)
+```
 
 ## Installation
 
