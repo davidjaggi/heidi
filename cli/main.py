@@ -3,12 +3,15 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
+import time
+from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from heidi.graph import create_graph
 from heidi.default_config import DEFAULT_CONFIG
@@ -76,21 +79,62 @@ def save_prompts(output_dir: Path, prompts: List[Dict[str, str]]):
         content += f"## Agent: {agent}\n\n"
         content += f"{prompt_text}\n\n"
         content += "---\n\n"
-    
+
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
+
+def get_git_commit() -> Optional[str]:
+    """
+    Returns the current git commit hash, or None if not in a git repo.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+def save_run_metadata(
+    output_dir: Path,
+    tickers: List[str],
+    model_provider: str,
+    shallow_model: str,
+    deep_model: str,
+    duration_seconds: float,
+    timestamp: str
+):
+    """
+    Saves run metadata to run_metadata.json.
+    """
+    metadata = {
+        "timestamp": datetime.strptime(timestamp, "%Y%m%d_%H%M%S").isoformat(),
+        "model_provider": model_provider,
+        "shallow_model": shallow_model,
+        "deep_model": deep_model,
+        "tickers": tickers,
+        "ticker_count": len(tickers),
+        "duration_seconds": round(duration_seconds, 2),
+        "git_commit": get_git_commit()
+    }
+    save_output(output_dir, metadata, "run_metadata.json")
 
 @app.command()
 def run(
     tickers_file: str = typer.Option(DEFAULT_CONFIG["tickers"], "--tickers", help="Path to tickers file"),
     output_dir: str = typer.Option("reports", "--output", help="Base output directory"),
-    model: str = typer.Option(DEFAULT_CONFIG["llm_provider"], "--model", help="Model provider (gemini/claude/openai)"),
-    model_name: str = typer.Option(None, "--model-name", help="Specific model name (optional)")
+    model: str = typer.Option(DEFAULT_CONFIG["llm_provider"], "--model", help="Model provider (gemini/anthropic/openai)"),
+    shallow_model: str = typer.Option(DEFAULT_CONFIG["shallow_think_llm"], "--shallow-model", help="Model for stock analysts (fast, parallel tasks)"),
+    deep_model: str = typer.Option(DEFAULT_CONFIG["deep_think_llm"], "--deep-model", help="Model for portfolio manager (complex reasoning)")
 ):
     """
     Run the Heidi multi-agent system.
     """
-    from datetime import datetime
     try:
         # 1. Load Data
         ticker_list = load_tickers(tickers_file)
@@ -101,23 +145,26 @@ def run(
         
         # 3. Execute Graph
         initial_state = {
-            "tickers": ticker_list, 
-            "reports": [], 
+            "tickers": ticker_list,
+            "reports": [],
             "prompts": [],
             "model_provider": model,
-            "model_name": model_name
+            "model_name_shallow": shallow_model,
+            "model_name_deep": deep_model
         }
         
+        start_time = time.time()
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             transient=True,
         ) as progress:
             task = progress.add_task(description="Running Analyst Agents...", total=None)
-            
+
             final_state = asyncio.run(graph.ainvoke(initial_state))
-            
+
             progress.update(task, completed=True)
+        duration_seconds = time.time() - start_time
 
         # 4. Results
         reports = final_state.get("reports", [])
@@ -141,24 +188,37 @@ def run(
         prompts = final_state.get("prompts", [])
         if prompts:
             save_prompts(run_output_dir, prompts)
-            
+
+        # Save Run Metadata
+        save_run_metadata(
+            run_output_dir,
+            tickers=ticker_list,
+            model_provider=model,
+            shallow_model=shallow_model,
+            deep_model=deep_model,
+            duration_seconds=duration_seconds,
+            timestamp=timestamp
+        )
+
         # Generate Markdown Summary
-            model_info = f"{model} ({model_name or 'default'})"
-            generate_markdown_summary(run_output_dir, reports, portfolio, timestamp, model_info)
-            
-            # Display Portfolio Table
-            table = Table(title=f"Recommended Portfolio")
+        model_info = f"{model} (shallow: {shallow_model}, deep: {deep_model})"
+        generate_markdown_summary(run_output_dir, reports, portfolio, timestamp, model_info)
+
+        # Display Portfolio Table
+        if portfolio:
+            table = Table(title="Recommended Portfolio")
             table.add_column("Ticker", style="cyan")
             table.add_column("Weight", justify="right")
             table.add_column("Reasoning", style="magenta")
-            
+
             for alloc in portfolio.allocations:
                 table.add_row(alloc.ticker, f"{alloc.weight:.2f}", alloc.reasoning)
-                
+
             console.print(table)
             console.print(f"\n[green]All reports saved to {run_output_dir}[/green]")
         else:
             console.print("[red]No portfolio generated.[/red]")
+            console.print(f"\n[green]Reports saved to {run_output_dir}[/green]")
 
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")

@@ -72,6 +72,60 @@ def get_news(ticker_symbol: str, max_items: int = 5) -> List[Dict[str, str]]:
 
 
 
+def get_esg(ticker_symbol: str) -> Dict[str, Any]:
+    """
+    Fetches ESG (Environmental, Social, Governance) risk scores for a ticker.
+
+    Yahoo Finance provides governance risk scores on a 1-10 scale where:
+    - 1-3: Low risk
+    - 4-7: Medium risk
+    - 8-10: High risk
+
+    Returns governance risk metrics including audit, board, compensation,
+    shareholder rights, and overall risk scores.
+    """
+    ticker = yf.Ticker(ticker_symbol)
+    info = ticker.info
+
+    # Extract governance risk scores (1-10 scale, lower is better)
+    audit_risk = info.get("auditRisk")
+    board_risk = info.get("boardRisk")
+    compensation_risk = info.get("compensationRisk")
+    shareholder_rights_risk = info.get("shareHolderRightsRisk")
+    overall_risk = info.get("overallRisk")
+
+    # Calculate average governance score if we have data
+    risk_scores = [r for r in [audit_risk, board_risk, compensation_risk,
+                               shareholder_rights_risk, overall_risk] if r is not None]
+    avg_governance_risk = round(sum(risk_scores) / len(risk_scores), 1) if risk_scores else None
+
+    # Map risk level to rating
+    def risk_rating(score):
+        if score is None:
+            return "N/A"
+        if score <= 3:
+            return "Low"
+        if score <= 7:
+            return "Medium"
+        return "High"
+
+    return {
+        "audit_risk": audit_risk,
+        "audit_risk_rating": risk_rating(audit_risk),
+        "board_risk": board_risk,
+        "board_risk_rating": risk_rating(board_risk),
+        "compensation_risk": compensation_risk,
+        "compensation_risk_rating": risk_rating(compensation_risk),
+        "shareholder_rights_risk": shareholder_rights_risk,
+        "shareholder_rights_risk_rating": risk_rating(shareholder_rights_risk),
+        "overall_risk": overall_risk,
+        "overall_risk_rating": risk_rating(overall_risk),
+        "avg_governance_risk": avg_governance_risk,
+        "avg_governance_risk_rating": risk_rating(avg_governance_risk),
+        "esg_populated": info.get("esgPopulated", False)
+    }
+
+
 def get_technical_indicators(ticker_symbol: str) -> Dict[str, Any]:
     """
     Fetches technical indicators for the ticker.
@@ -153,5 +207,6 @@ def get_full_analysis_data(ticker_symbol: str) -> Dict[str, Any]:
         "info": get_ticker_info(ticker_symbol),
         "history": get_price_history(ticker_symbol),
         "news": get_news(ticker_symbol),
-        "technical_indicators": get_technical_indicators(ticker_symbol)
+        "technical_indicators": get_technical_indicators(ticker_symbol),
+        "esg": get_esg(ticker_symbol)
     }

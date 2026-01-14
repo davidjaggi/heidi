@@ -57,6 +57,7 @@ def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
     history = data.get("history", "")
     news = data.get("news", [])
     tech = data.get("technical_indicators", {})
+    esg = data.get("esg", {})
     
     news_str = "\n".join([f"- {n['title']}, {n['summary']})" for n in news])
     
@@ -67,6 +68,15 @@ def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
 - SMA 200: {tech.get('sma_200', 'N/A')}
 - Bollinger Bands: Upper {tech.get('bb_upper', 'N/A')}, Middle {tech.get('bb_middle', 'N/A')}, Lower {tech.get('bb_lower', 'N/A')}
 - ATR (14): {tech.get('atr_14', 'N/A')}
+    """.strip()
+
+    esg_str = f"""
+- Overall Risk: {esg.get('overall_risk', 'N/A')} ({esg.get('overall_risk_rating', 'N/A')})
+- Board Risk: {esg.get('board_risk', 'N/A')} ({esg.get('board_risk_rating', 'N/A')})
+- Audit Risk: {esg.get('audit_risk', 'N/A')} ({esg.get('audit_risk_rating', 'N/A')})
+- Compensation Risk: {esg.get('compensation_risk', 'N/A')} ({esg.get('compensation_risk_rating', 'N/A')})
+- Shareholder Rights Risk: {esg.get('shareholder_rights_risk', 'N/A')} ({esg.get('shareholder_rights_risk_rating', 'N/A')})
+- Average Governance Risk: {esg.get('avg_governance_risk', 'N/A')} ({esg.get('avg_governance_risk_rating', 'N/A')})
     """.strip()
 
     system_msg = f"""
@@ -96,6 +106,9 @@ Current Price: {info.get('current_price')} {info.get('currency')}
 ### Technical Indicators
 {tech_str}
 
+### ESG / Governance Risk (1-10 scale, lower is better)
+{esg_str}
+
 ### Price History (Weekly Close, Last 1 Year)
 {history}
 
@@ -103,11 +116,12 @@ Current Price: {info.get('current_price')} {info.get('currency')}
 {news_str}
 
 ### Instructions
-1. Analyze the fundamentals, technical trend, and sentiment.
+1. Analyze the fundamentals, technical trend, sentiment, and ESG/governance factors.
 2. Determine a recommendation: STRONG_BUY, BUY, NEUTRAL, SELL, or STRONG_SELL.
 3. Assign a confidence score (0.0 to 1.0).
-4. List key drivers and risks.
+4. List key drivers and risks (include any ESG concerns if relevant).
 5. Provide a technical view.
+6. Provide an ESG assessment summarizing governance quality.
 """
     return ChatPromptTemplate.from_messages([
         ("system", system_msg),
