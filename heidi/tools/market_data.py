@@ -65,10 +65,8 @@ def get_news(ticker_symbol: str, max_items: int = 5) -> List[Dict[str, str]]:
     results = []
     for item in news[:max_items]:
         results.append({
-            "title": item.get("title"),
-            "publisher": item.get("publisher"),
-            "link": item.get("link"),
-            "publish_time": datetime.fromtimestamp(item.get("providerPublishTime", 0)).strftime('%Y-%m-%d')
+            "title": item["content"]["title"],
+            "summary": item["content"]["summary"],
         })
     return results
 

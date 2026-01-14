@@ -8,7 +8,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from typing import List
+from typing import List, Dict
 
 from heidi.graph import create_graph
 from heidi.default_config import DEFAULT_CONFIG
@@ -64,6 +64,22 @@ def generate_markdown_summary(output_dir: Path, reports: list, portfolio, timest
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write(content)
 
+def save_prompts(output_dir: Path, prompts: List[Dict[str, str]]):
+    """
+    Saves all agent prompts to a prompts.md file.
+    """
+    path = output_dir / "prompts.md"
+    content = "# Agent Prompts Log\n\n"
+    for p in prompts:
+        agent = p.get("agent", "Unknown Agent")
+        prompt_text = p.get("prompt", "")
+        content += f"## Agent: {agent}\n\n"
+        content += f"{prompt_text}\n\n"
+        content += "---\n\n"
+    
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
 @app.command()
 def run(
     tickers_file: str = typer.Option(DEFAULT_CONFIG["tickers"], "--tickers", help="Path to tickers file"),
@@ -87,6 +103,7 @@ def run(
         initial_state = {
             "tickers": ticker_list, 
             "reports": [], 
+            "prompts": [],
             "model_provider": model,
             "model_name": model_name
         }
@@ -120,7 +137,12 @@ def run(
         if portfolio:
             save_output(run_output_dir, portfolio.model_dump(), "portfolio.json")
             
-            # Generate Markdown Summary
+        # Save Prompts
+        prompts = final_state.get("prompts", [])
+        if prompts:
+            save_prompts(run_output_dir, prompts)
+            
+        # Generate Markdown Summary
             model_info = f"{model} ({model_name or 'default'})"
             generate_markdown_summary(run_output_dir, reports, portfolio, timestamp, model_info)
             

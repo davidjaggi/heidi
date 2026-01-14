@@ -43,7 +43,14 @@ Provide reasoning for each allocation.
     chain = prompt | structured_llm
     portfolio = chain.invoke({}, config={"callbacks": [HeidiCallbackHandler()], "metadata": {"agent_name": "PortfolioManager"}})
     
+    # Capture prompt for logging
+    messages = prompt.format_messages()
+    prompt_text = "\n".join([f"### {m.type.upper()}\n{m.content}" for m in messages])
+
     # Timestamp
     portfolio.timestamp = datetime.now().isoformat()
     
-    return {"portfolio": portfolio}
+    return {
+        "portfolio": portfolio,
+        "prompts": [{"agent": "PortfolioManager", "prompt": prompt_text}]
+    }

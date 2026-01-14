@@ -35,6 +35,10 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
     chain = prompt | structured_llm
     report = chain.invoke({}, config={"callbacks": [HeidiCallbackHandler()], "metadata": {"agent_name": f"Analyst:{ticker}"}})
     
+    # Capture prompt for logging
+    messages = prompt.format_messages()
+    prompt_text = "\n".join([f"### {m.type.upper()}\n{m.content}" for m in messages])
+
     # Ensure sector and industry are populated (fallback if LLM misses it)
     if "info" in data:
         if not report.sector:
@@ -43,7 +47,10 @@ def stock_analyst_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
             report.industry = data["info"].get("industry", "Unknown Industry")
     
     # Return as list to match 'reports' state annotation (operator.add)
-    return {"reports": [report]}
+    return {
+        "reports": [report],
+        "prompts": [{"agent": f"Analyst:{ticker}", "prompt": prompt_text}]
+    }
 
 def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
     info = data.get("info", {})
@@ -51,7 +58,7 @@ def _build_prompt(ticker: str, data: Dict[str, Any]) -> ChatPromptTemplate:
     news = data.get("news", [])
     tech = data.get("technical_indicators", {})
     
-    news_str = "\n".join([f"- {n['title']} ({n['publisher']}, {n['publish_time']})" for n in news])
+    news_str = "\n".join([f"- {n['title']}, {n['summary']})" for n in news])
     
     tech_str = f"""
 - RSI (14): {tech.get('rsi_14', 'N/A')}
