@@ -107,6 +107,96 @@ class ReviewDecision(str, Enum):
     NEEDS_REVISION = "NEEDS_REVISION"
 
 
+class RiskDecision(str, Enum):
+    """Risk manager decision on portfolio acceptability."""
+    APPROVED = "APPROVED"
+    NEEDS_REVISION = "NEEDS_REVISION"
+
+
+class RiskMetrics(BaseModel):
+    """Quantitative risk metrics for portfolio assessment."""
+    var_95: float = Field(description="95% Value at Risk (daily, as decimal)")
+    cvar_95: float = Field(description="95% Conditional VaR / Expected Shortfall (daily, as decimal)")
+    max_drawdown: float = Field(description="Maximum historical drawdown (as decimal, e.g., 0.25 = 25%)")
+    annualized_volatility: float = Field(description="Annualized portfolio volatility (as decimal)")
+    sharpe_ratio: float = Field(description="Risk-adjusted return (Sharpe Ratio)")
+    diversification_score: float = Field(ge=0, le=1, description="Diversification score based on correlation (0-1, higher is better)")
+
+
+class StressTestResult(BaseModel):
+    """Result of a stress test scenario."""
+    scenario: str = Field(description="Name of the stress scenario (e.g., 'COVID-19 Crash')")
+    portfolio_impact: float = Field(description="Portfolio return during scenario (negative = loss)")
+
+
+class RiskManagerDecision(BaseModel):
+    """LLM decision output for risk assessment (without calculated metrics)."""
+    decision: RiskDecision = Field(description="Risk manager decision: APPROVED or NEEDS_REVISION")
+    concerns: List[str] = Field(default_factory=list, description="Key risk concerns identified")
+    feedback: str = Field(default="", description="Detailed feedback for portfolio manager")
+
+    @field_validator('concerns', mode='before')
+    @classmethod
+    def parse_concerns(cls, v):
+        """Handle concerns being passed as a string."""
+        if isinstance(v, str):
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            if v.strip():
+                return [v.strip()]
+            return []
+        return v
+
+
+class RiskAssessment(BaseModel):
+    """Complete risk assessment for a portfolio."""
+    decision: RiskDecision = Field(description="Risk manager decision: APPROVED or NEEDS_REVISION")
+    risk_metrics: RiskMetrics = Field(description="Quantitative risk metrics")
+    stress_tests: List[StressTestResult] = Field(default_factory=list, description="Results of stress test scenarios")
+    concerns: List[str] = Field(default_factory=list, description="Key risk concerns identified")
+    feedback: str = Field(default="", description="Detailed feedback for portfolio manager")
+    timestamp: str = Field(default="", description="ISO timestamp of assessment")
+
+    @field_validator('concerns', mode='before')
+    @classmethod
+    def parse_concerns(cls, v):
+        """Handle concerns being passed as a string."""
+        if isinstance(v, str):
+            # Try to parse as JSON if it looks like a list
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            # If it's a non-empty string, wrap it in a list
+            if v.strip():
+                return [v.strip()]
+            return []
+        return v
+
+    @field_validator('stress_tests', mode='before')
+    @classmethod
+    def parse_stress_tests(cls, v):
+        """Handle stress_tests being passed as a string."""
+        if isinstance(v, str):
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            return []
+        return v
+
+
 class ReportReview(BaseModel):
     """Review result for an analyst report."""
     ticker: str

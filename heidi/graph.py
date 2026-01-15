@@ -7,6 +7,7 @@ from heidi.models.state import AgentState
 from heidi.agents.stock_analyst import stock_analyst_node
 from heidi.agents.portfolio_manager import portfolio_manager_node
 from heidi.agents.report_reviewer import report_reviewer_node, should_revise
+from heidi.agents.risk_manager import risk_manager_node, should_revise_portfolio
 
 
 def save_graph_as_png(app: CompiledStateGraph, output_file_path: str = "") -> None:
@@ -53,14 +54,25 @@ def route_after_review(state: AgentState):
     return "portfolio_node"  # Must match actual node name
 
 
+def route_after_risk_review(state: AgentState):
+    """
+    Route after risk review: revise portfolio or finish.
+    Returns node name string for portfolio revision, or END to finish.
+    """
+    if should_revise_portfolio(state):
+        return "portfolio_node"
+    return END
+
+
 def create_graph(save_png: bool = True, png_path: str = "heidi/graph.png") -> CompiledStateGraph:
     """
     Creates and compiles the Heidi multi-agent graph.
 
     Graph flow:
-    START -> analyst_nodes -> reviewer_node -> (conditional) -> portfolio_node -> END
-                                    ^                |
-                                    |________________| (if needs revision, via Send)
+    START -> analyst_nodes -> reviewer_node -> (conditional) -> portfolio_node -> risk_manager_node -> (conditional) -> END
+                                    ^                |                                    ^                    |
+                                    |________________|                                    |____________________|
+                              (if needs revision, via Send)                         (if risk needs revision)
 
     Args:
         save_png: Whether to save the graph visualization as PNG
@@ -75,6 +87,7 @@ def create_graph(save_png: bool = True, png_path: str = "heidi/graph.png") -> Co
     builder.add_node("analyst_node", stock_analyst_node)
     builder.add_node("reviewer_node", report_reviewer_node)
     builder.add_node("portfolio_node", portfolio_manager_node)
+    builder.add_node("risk_node", risk_manager_node)
 
     # Edges
     # Start -> Map over tickers -> Analyst Nodes
@@ -90,7 +103,15 @@ def create_graph(save_png: bool = True, png_path: str = "heidi/graph.png") -> Co
         ["analyst_node", "portfolio_node"]  # Possible destinations
     )
 
-    builder.add_edge("portfolio_node", END)
+    # Portfolio -> Risk Manager
+    builder.add_edge("portfolio_node", "risk_node")
+
+    # Risk Manager -> Conditional routing (back to portfolio or END)
+    builder.add_conditional_edges(
+        "risk_node",
+        route_after_risk_review,
+        ["portfolio_node", END]  # Possible destinations
+    )
 
     graph = builder.compile()
 
