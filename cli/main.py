@@ -38,22 +38,22 @@ def save_output(output_dir: Path, data: dict, filename: str):
     with open(output_dir / filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def generate_markdown_summary(output_dir: Path, reports: list, portfolio, timestamp: str, model_info: str):
+def generate_markdown_summary(output_dir: Path, reports: list, portfolio, risk_assessment, timestamp: str, model_info: str):
     """
     Generates a summary.md for the run.
     """
     summary_path = output_dir / "summary.md"
-    
+
     content = f"# Heidi Investment Run Summary - {timestamp}\n\n"
     content += f"**Model Configuration:** {model_info}\n\n"
-    
+
     content += "## Individual Analyst Reports\n\n"
     content += "| Ticker | Company | Recommendation | Confidence | Key Drivers |\n"
     content += "| :--- | :--- | :--- | :--- | :--- |\n"
     for r in reports:
         drivers = ", ".join(r.key_drivers[:2])
         content += f"| {r.ticker} | {r.company} | **{r.recommendation.value}** | {r.confidence_score:.2f} | {drivers} |\n"
-    
+
     content += "\n## Portfolio Recommendation\n\n"
     if portfolio:
         content += f"**Timestamp:** {portfolio.timestamp}\n\n"
@@ -63,7 +63,37 @@ def generate_markdown_summary(output_dir: Path, reports: list, portfolio, timest
             content += f"| {alloc.ticker} | {alloc.weight:.2f} | {alloc.reasoning} |\n"
     else:
         content += "*No portfolio generated.*\n"
-        
+
+    content += "\n## Risk Assessment\n\n"
+    if risk_assessment:
+        content += f"**Decision:** {risk_assessment.decision.value}\n\n"
+        content += "### Risk Metrics\n\n"
+        content += "| Metric | Value |\n"
+        content += "| :--- | :--- |\n"
+        metrics = risk_assessment.risk_metrics
+        content += f"| Value at Risk (95%, daily) | {metrics.var_95:.2%} |\n"
+        content += f"| Conditional VaR (95%) | {metrics.cvar_95:.2%} |\n"
+        content += f"| Maximum Drawdown | {metrics.max_drawdown:.2%} |\n"
+        content += f"| Annualized Volatility | {metrics.annualized_volatility:.2%} |\n"
+        content += f"| Sharpe Ratio | {metrics.sharpe_ratio:.2f} |\n"
+        content += f"| Diversification Score | {metrics.diversification_score:.2f} |\n"
+
+        if risk_assessment.stress_tests:
+            content += "\n### Stress Tests\n\n"
+            content += "| Scenario | Portfolio Impact |\n"
+            content += "| :--- | :--- |\n"
+            for test in risk_assessment.stress_tests:
+                content += f"| {test.scenario} | {test.portfolio_impact:+.2%} |\n"
+
+        if risk_assessment.concerns:
+            content += "\n### Concerns\n\n"
+            for concern in risk_assessment.concerns:
+                content += f"- {concern}\n"
+
+        content += f"\n### Feedback\n\n{risk_assessment.feedback}\n"
+    else:
+        content += "*No risk assessment generated.*\n"
+
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write(content)
 
@@ -152,7 +182,9 @@ def run(
             "model_name_shallow": shallow_model,
             "model_name_deep": deep_model,
             "revision_count": 0,
-            "review_feedback": []
+            "review_feedback": [],
+            "risk_feedback": [],
+            "risk_revision_count": 0
         }
         
         start_time = time.time()
@@ -171,21 +203,26 @@ def run(
         # 4. Results
         reports = final_state.get("reports", [])
         portfolio = final_state.get("portfolio")
-        
+        risk_assessment = final_state.get("risk_assessment")
+
         console.print(f"[bold blue]Generated {len(reports)} Analyst Reports[/bold blue]")
-        
+
         # Create timestamped subfolder
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_output_dir = Path(output_dir) / timestamp
-        
+
         # Save individual reports
         for r in reports:
             save_output(run_output_dir, r.model_dump(), f"{r.ticker}.json")
-            
+
         # Save Portfolio
         if portfolio:
             save_output(run_output_dir, portfolio.model_dump(), "portfolio.json")
-            
+
+        # Save Risk Assessment
+        if risk_assessment:
+            save_output(run_output_dir, risk_assessment.model_dump(), "risk_assessment.json")
+
         # Save Prompts
         prompts = final_state.get("prompts", [])
         if prompts:
@@ -204,7 +241,7 @@ def run(
 
         # Generate Markdown Summary
         model_info = f"{model} (shallow: {shallow_model}, deep: {deep_model})"
-        generate_markdown_summary(run_output_dir, reports, portfolio, timestamp, model_info)
+        generate_markdown_summary(run_output_dir, reports, portfolio, risk_assessment, timestamp, model_info)
 
         # Display Portfolio Table
         if portfolio:
@@ -217,6 +254,30 @@ def run(
                 table.add_row(alloc.ticker, f"{alloc.weight:.2f}", alloc.reasoning)
 
             console.print(table)
+
+        # Display Risk Assessment Table
+        if risk_assessment:
+            risk_table = Table(title=f"Risk Assessment - {risk_assessment.decision.value}")
+            risk_table.add_column("Metric", style="cyan")
+            risk_table.add_column("Value", justify="right")
+
+            metrics = risk_assessment.risk_metrics
+            risk_table.add_row("VaR (95%, daily)", f"{metrics.var_95:.2%}")
+            risk_table.add_row("CVaR (95%)", f"{metrics.cvar_95:.2%}")
+            risk_table.add_row("Max Drawdown", f"{metrics.max_drawdown:.2%}")
+            risk_table.add_row("Volatility (ann.)", f"{metrics.annualized_volatility:.2%}")
+            risk_table.add_row("Sharpe Ratio", f"{metrics.sharpe_ratio:.2f}")
+            risk_table.add_row("Diversification", f"{metrics.diversification_score:.2f}")
+
+            console.print(risk_table)
+
+            if risk_assessment.concerns:
+                console.print("\n[yellow]Risk Concerns:[/yellow]")
+                for concern in risk_assessment.concerns:
+                    console.print(f"  - {concern}")
+
+            console.print(f"\n[green]All reports saved to {run_output_dir}[/green]")
+        elif portfolio:
             console.print(f"\n[green]All reports saved to {run_output_dir}[/green]")
         else:
             console.print("[red]No portfolio generated.[/red]")

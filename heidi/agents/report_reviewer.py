@@ -45,10 +45,26 @@ def report_reviewer_node(state: AgentState) -> Dict[str, Any]:
 
         reviews.append(review)
 
-        # Capture prompt for logging
+        # Capture prompt and output for logging
         messages = prompt.format_messages()
         prompt_text = "\n".join([f"### {m.type.upper()}\n{m.content}" for m in messages])
-        prompts_log.append({"agent": f"Reviewer:{report.ticker}", "prompt": prompt_text})
+
+        # Add reviewer output to the log
+        output_text = f"""
+### REVIEWER OUTPUT
+**Decision:** {review.decision.value}
+**Confidence in Review:** {review.confidence_in_review:.2f}
+
+**Strengths:**
+{chr(10).join(f'- {s}' for s in review.strengths) if review.strengths else '- None identified'}
+
+**Issues:**
+{chr(10).join(f'- {i}' for i in review.issues) if review.issues else '- None identified'}
+
+**Feedback:**
+{review.feedback}
+"""
+        prompts_log.append({"agent": f"Reviewer:{report.ticker}", "prompt": prompt_text + output_text})
 
         # Build feedback string
         if review.decision == ReviewDecision.NEEDS_REVISION:
