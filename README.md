@@ -1,4 +1,4 @@
-![Cow Banner](assets/cow.jpg)
+![Cow Banner](assets/assets/Gemini_Generated_Image_qbdawtqbdawtqbda.png)
 
 # Heidi
 
